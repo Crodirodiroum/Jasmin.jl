@@ -150,9 +150,10 @@ function phase1(A::Matrix{T},b::Vector,c::Vector; verbose::Bool = false) where  
         return M, base
     end
 end
-function isOptimal(ss::StandardSimplexe)
-    return all(ss.M[end, 1:end-1] .>=0)
-end
+                                
+function isOptimal(ss::StandardSimplexe{T}) where T
+    return all(ss.M[end, 1:end-1] .>= -10*eps(T))
+end                     
 
 
 function solve!(ss::StandardSimplexe{T}; verbose::Bool = false, kmax = 1000, pivotrule::Function = findpivot) where T
@@ -165,6 +166,10 @@ function solve!(ss::StandardSimplexe{T}; verbose::Bool = false, kmax = 1000, piv
     while !isOptimal(ss) && (k+=1) <= kmax
         verbose && println(ss)
         i, j = pivotrule(ss, verbose = verbose)
+        if i == -1
+            ss.status = Infeasible()
+            break
+        end
         pivot!(ss.M, i, j)
         ss.b_idx[i] = j
     end
