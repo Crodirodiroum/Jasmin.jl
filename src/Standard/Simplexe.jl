@@ -167,7 +167,7 @@ function solve!(ss::StandardSimplexe{T}; verbose::Bool = false, kmax = 1000, piv
         verbose && println(ss)
         i, j = pivotrule(ss, verbose = verbose)
         if i == -1
-            ss.status = Infeasible()
+            ss.status = Unbounded()
             break
         end
         pivot!(ss.M, i, j)
@@ -179,7 +179,8 @@ function solve!(ss::StandardSimplexe{T}; verbose::Bool = false, kmax = 1000, piv
         ss.xstar[ss.b_idx] = ss.M[1:end-1, end]
         ss.vstar = -ss.M[end, end]
     end
-    verbose && (println("optimal Simplexe");  println(ss))
+    status = ss.status
+    verbose &&(println("$status Simplexe");  println(ss))
     ss.status
 end
 
