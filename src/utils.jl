@@ -1,5 +1,5 @@
-ei(T, i, n) = (v = zeros(T, n); v[i] = one(T); v)
-ei(i, n) = ei(Float64, i, n)
+ei(::Type{T}, i::Integer, n::Integer) where T = (v = zeros(T, n); v[i] = one(T); v)
+ei(i::Integer, n::Integer) = ei(Float64, i, n) 
 
 function pivot!(M::Array{T,2}, i::Int, j::Int) where T
     m,n = size(M)
