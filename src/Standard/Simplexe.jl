@@ -152,7 +152,7 @@ function phase1(A::Matrix{T},b::Vector,c::Vector; verbose::Bool = false) where  
 end
                                 
 function isOptimal(ss::StandardSimplexe{T}) where T
-    return all(ss.M[end, 1:end-1] .>= -10*eps(T))
+    return all(ss.M[end, 1:end-1] .>= -10*eps())
 end                     
 
 
