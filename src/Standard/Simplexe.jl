@@ -20,7 +20,7 @@ mutable struct StandardSimplexe{T} <: AbstractStandard{T}
         status = (b_idx == [-1]) ? Infeasible() : Unknown()
         return new{T}(M, T[],  T(Inf), b_idx, status)
     end
-    function StandardSimplexe(A::Array{T, 2}, b::Array{T, 1}, c::Array{T, 1}, b_idx::Array{Int, 1}) where T
+    function StandardSimplexe(A::Array{T, 2}, b::Array{T, 1}, c::Array{T, 1}, b_idx::Array{Int, 1}; verbose::Bool = false) where T
         m,n = size(A)
         @assert !(typeof(T) <: Integer)  "Type $T cannot be a subtype of Integer"
         @assert length(b) == m "dimension of A and b mismatch, size(A) = ($m, $n), length(b) = $(length(b)) != $m"
@@ -34,7 +34,7 @@ mutable struct StandardSimplexe{T} <: AbstractStandard{T}
         end
         new{T}(M, [],  T(Inf), b_idx, Unknown())
     end
-    function StandardSimplexe(M::Array{T, 2}, b_idx::Array{Int, 1}) where T
+    function StandardSimplexe(M::Array{T, 2}, b_idx::Array{Int, 1}; verbose::Bool = false) where T
         @assert !(typeof(T) <: Integer)  "Type $T cannot be a subtype of Integer"
         @assert all(M[1:end-1, end] .>= 0) "Initial Basis must be feasible"
         new{T}(M, [],  T(Inf), b_idx, Unknown())
