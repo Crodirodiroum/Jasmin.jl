@@ -41,11 +41,11 @@ mutable struct StandardSimplexe{T} <: AbstractStandard{T}
     end
 end
 function xstar(ss::StandardSimplexe{T}) where T
-    @assert ss.status == Optimal() "probleme not solved yet"
+    ss.status != Optimal() @warn "probleme not solved yet"
     return ss.xstar
 end
 function vstar(ss::StandardSimplexe{T}) where T
-    @assert ss.status == Optimal() "probleme not solved yet"
+    ss.status != Optimal() && @warn "probleme not solved yet"
     return ss.vstar
 end
     
