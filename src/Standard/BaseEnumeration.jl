@@ -24,7 +24,7 @@ function solve!(be::BaseEnumeration{T}; verbose::Bool = false) where T
     for comb in allComb
         verbose && println(comb)
         B = be.A[:, comb]
-        if rank(B) == m && all((x_B = B\be.b) .>= 0) && (v_B = dot(be.c[comb], x_B)) < vopt
+        if rank(B) == m && all((x_B = B\be.b) .>= -10*eps()) && (v_B = dot(be.c[comb], x_B)) < vopt
             vopt = v_B
             sol[:] .= zero(T)
             sol[comb] = x_B
