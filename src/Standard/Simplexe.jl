@@ -3,7 +3,7 @@ mutable struct StandardSimplexe{T} <: AbstractStandard{T}
     A::Array{T, 2}
     b::Array{T, 1}
     c::Array{T, 1}
-    Binv::Arrat{T, 2}
+    Binv::Array{T, 2}
     b_idx_initial::Array{Int, 1}
     xstar::Array{T, 1}
     vstar::T
