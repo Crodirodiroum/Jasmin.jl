@@ -1,51 +1,69 @@
 mutable struct StandardSimplexe{T} <: AbstractStandard{T}
     M::Array{T, 2}
+    A::Array{T, 2}
+    b::Array{T, 1}
+    c::Array{T, 1}
+    Binv::Arrat{T, 2}
+    b_idx_initial::Array{Int, 1}
     xstar::Array{T, 1}
     vstar::T
     b_idx::Array{Int, 1}
     status::AbstractStatus
-    function StandardSimplexe(A::Array{T, 2}, b::Array{T, 1}, c::Array{T, 1}; verbose::Bool = true) where T
+    function StandardSimplexe(A::Array{T, 2}, b::Array{T, 1}, c::Array{T, 1}; verbose::Bool = true, b_idx::Array{Int, 1} = [-1]) where T
         m,n = size(A)
         @assert !(typeof(T) <: Integer)  "Type $T cannot be a subtype of Integer"
         @assert length(b) == m "dimension of A and b mismatch, size(A) = ($m, $n), length(b) = $(length(b)) != $m"
         @assert length(c) == n "dimension of A and c mismatch, size(A) = ($m, $n), length(c) = $(length(c)) != $n"
         @assert rank(A) == m "A is not a full rank Matrix"
-        for k in 1:m
-            if b[k] <  0
-                A[k, :] = -A[k, :]
-                b[k] = -b[k]
+        ss = new{T}()
+        ss.xstar = T[],  
+        ss.vstar = T(Inf) 
+        ss.status = status
+        ss.A = copy(A)
+        ss.b = copy(b)
+        ss.c = copy(c)
+        
+        if b_idx != [-1]
+            #if a first base is given, we use it
+            M = [A b; c' T(0)]
+            @assert all(areisolate(M[:, b_idx[i]], i) for i in 1:m) "base given contains non isolated index" 
+            BInv = Array{T, 2}(I, m, m)
+            ss.Binv = Binv
+            ss.b_idx = copy(b_idx)
+            ss.b_idx_initial = copy(b_idx)
+            ss.M = M
+        else
+            Binv = Array{T, 2}(I, m, m)
+            for k in 1:m
+                if b[k] <  0
+                    Binv[i, i] = -one(T)
+                    A[k, :] = -A[k, :]
+                    b[k] = -b[k]
+                end
             end
+            M, b_idx = phase1(A,b,c, verbose = verbose)
+            B = ss.A[:, b_idx]
+            Binv = Binv*inv(B)#could be much better. Lazy code
+            ss.Binv = Binv
+            ss.b_idx = copy(b_idx)
+            ss.b_idx_initial =  copy(b_idx)
+            ss.M = M
+            status = (b_idx == [-1]) ? Infeasible() : Unknown()
         end
-        M, b_idx = phase1(A,b,c, verbose = verbose)
-        status = (b_idx == [-1]) ? Infeasible() : Unknown()
-        return new{T}(M, T[],  T(Inf), b_idx, status)
-    end
-    function StandardSimplexe(A::Array{T, 2}, b::Array{T, 1}, c::Array{T, 1}, b_idx::Array{Int, 1}; verbose::Bool = false) where T
-        m,n = size(A)
-        @assert !(typeof(T) <: Integer)  "Type $T cannot be a subtype of Integer"
-        @assert length(b) == m "dimension of A and b mismatch, size(A) = ($m, $n), length(b) = $(length(b)) != $m"
-        @assert length(c) == n "dimension of A and c mismatch, size(A) = ($m, $n), length(c) = $(length(c)) != $n"
-        @assert rank(A) == m "A is not a full rank Matrix"
-        M = [A b; c' ; zero(T)]
-        for k in 1:m
-            if b[k] <  0
-                M[k, :] *= -1
-            end
-        end
-        new{T}(M, [],  T(Inf), b_idx, Unknown())
-    end
-    function StandardSimplexe(M::Array{T, 2}, b_idx::Array{Int, 1}; verbose::Bool = false) where T
-        @assert !(typeof(T) <: Integer)  "Type $T cannot be a subtype of Integer"
-        @assert all(M[1:end-1, end] .>= 0) "Initial Basis must be feasible"
-        new{T}(M, [],  T(Inf), b_idx, Unknown())
+        return ss
     end
 end
+function areisolate(v::Vector{T}, i::Int) where T
+    m = length(v)
+    return v[i] == one(T) && all(v[setdiff(1:m, i)] .== zero(T))
+end
+    
 function xstar(ss::StandardSimplexe{T}) where T
-    ss.status != Optimal() && @warn "probleme not solved yet"
+    ss.status != Optimal() && @warn "probleme not optimal"
     return ss.xstar
 end
 function vstar(ss::StandardSimplexe{T}) where T
-    ss.status != Optimal() && @warn "probleme not solved yet"
+    ss.status != Optimal() && @warn "probleme not optimal"
     return ss.vstar
 end
     
@@ -178,9 +196,10 @@ function solve!(ss::StandardSimplexe{T}; verbose::Bool = false, kmax = 1000, piv
         ss.xstar = zeros(T, n)
         ss.xstar[ss.b_idx] = ss.M[1:end-1, end]
         ss.vstar = -ss.M[end, end]
-    end
+    end  
     status = ss.status
     verbose &&(println("$status Simplexe");  println(ss))
+    ss.Binv = ss.M[1:end-1, b_idx_initial] * ss.Binv
     ss.status
 end
 
