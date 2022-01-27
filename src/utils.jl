@@ -1,8 +1,8 @@
-ei(::Type{T}, i::Integer, n::Integer) where T = (v = zeros(T, n); v[i] = one(T); v)
-ei(i::Integer, n::Integer) = ei(Float64, i, n) 
+ei(::Type{T}, i::Integer, n::Integer)::Vector{T} where T = (v = zeros(T, n); v[i] = one(T); v)
+ei(i::Integer, n::Integer)::Vector{Float64} = ei(Float64, i, n) 
 
 
-function pivot!(M::Array{T,2}, i::Int, j::Int, Binv::Array{T, 2} = Array{T, 2}(undef, 0, 0)) where T
+function pivot!(M::Array{T,2}, i::Int, j::Int, Binv::Array{T, 2} = Array{T, 2}(undef, 0, 0))::Matrix{T} where T
     updBinv = !iszero(length(Binv))
     m,n = size(M)
     @assert M[i, j] != 0 "pivot  illegal"
