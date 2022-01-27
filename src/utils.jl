@@ -1,4 +1,8 @@
-ei(::Type{T}, i::Integer, n::Integer)::Vector{T} where T = (v = zeros(T, n); v[i] = one(T); v)
+function ei(::Type{T}, i::Integer, n::Integer)::Vector{T} where T
+    v = zeros(T, n)
+    v[i] = one(T)
+    return v
+end
 ei(i::Integer, n::Integer)::Vector{Float64} = ei(Float64, i, n) 
 
 
