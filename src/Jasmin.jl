@@ -17,4 +17,6 @@ abstract type AbstractLP{T} end
 
 include("LinearProblemRepresentation/main.jl")
 include("Solvers/main.jl")
+
+include("test/main.jl")
 end # module
