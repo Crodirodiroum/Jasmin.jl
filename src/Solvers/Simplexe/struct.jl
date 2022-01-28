@@ -1,42 +1,32 @@
-mutable struct StandardSimplexe{T, BType <: AbstractMatrix{T}} <: AbstractSolver{T}
+mutable struct StandardSimplexe{T} <: AbstractSolver{T}
     M::Array{T, 2}
-    Binv::BType
+    Binv::Array{T, 2}
     xstar::Array{T, 1}
     vstar::T
     b_idx::Array{Int, 1}
+    freelines::BitVector#index k is true if line k is linearly independent of the previous lines, dependent lines are found during phase 1.
     status::Status
-    function StandardSimplexe{T, BINV}(A::Matrix{T}, b::Vector{T}, c::Vector{T}) where {T, BINV}
-        #println("in SS")
+    function StandardSimplexe{T}(M::Matrix{T}) where {T}
         @assert !(typeof(T) <: Integer)  "Type $T cannot be a subtype of Integer"
-        m, n = size(A)
-        M = [A b; c' zero(T)]
-        iscanon, b_idx = iscanonical(M)
-        if (BINV <: SubArray{T}) 
-            if iscanon && all(ss.M[1:end-1, end] .>= 0)
-                Binv = @view M[1:end-1, copy(b_idx)]
-                b_idx = copy(b_idx)
-            else
-                M = [A I b; c' zeros(T, 1, m) zero(T)]
-                Binv = @view M[1:end-1, n+1:n+m]
-            end
-        else
-            Binv = Array{T, 2}(I, m, m)
-            b_idx = -ones(T, m)
-        end
-        ss = new{T, BINV}()
+        m, n = size(M).-1
+        ss = new{T}()
         ss.M = M
-        ss.Binv = Binv
-        ss.b_idx = b_idx
-        ss.xstar = zeros(T, m)
+        ss.Binv = Array{T, 2}(I, m, m)
+        ss.b_idx = -ones(T, m)
+        ss.xstar = zeros(T, n)
         ss.status = Unknown
+        ss.freelines = trues(m) #lines are inocent until proven guilty
         return ss
     end
 end
-
-function StandardSimplexe{T}(A::Matrix{T}, b::Vector{T}, c::Vector{T}) where T
-    StandardSimplexe{T, Array{T, 2}}(A, b, c)
+function StandardSimplexe{T}(A::Matrix{T}, b::Vector{T}, c::Vector{T}) where {T}
+    M = [A b; c' zero(T)]
+    return  StandardSimplexe{T}(M)
 end
-
+function StandardSimplexe(A::Matrix{T}, b::Vector{T}, c::Vector{T}) where {T}
+    M = [A b; c' zero(T)]
+    return  StandardSimplexe{T}(M)
+end
 function StandardSimplexe(lp::AbstractLP{T}) where T
     A = getA(lp)
     b = getb(lp)
@@ -45,5 +35,84 @@ function StandardSimplexe(lp::AbstractLP{T}) where T
 end
 
 function (ss::StandardSimplexe{T})(lp::AbstractLP{T}; verbose::Bool = false) where T
-    solve!(ss)
+    m = size(ss.M, 1) - 1
+    for k in 1:m
+        if ss.M[k, end] <  0
+            ss.Binv[k, :] *= -1
+            ss.M[k, :] *= -1
+        end
+    end
+    M = ss.M
+    vM = @view M[1:end-1, :]
+    iscanon, basis = iscanonical(vM)
+    if iscanon
+        ss.b_idx[:] = basis
+        isOptimal(ss) && (ss.status = Optimal; lp.status = Optimal; lp.xstar[:] = ss.xstar; ss.vstar = lp.vstar; return ss.status)
+        phase2!(ss, verbose = verbose)
+    else
+        phase1!(ss, verbose = verbose)
+        isOptimal(ss) && (ss.status = Optimal; lp.status = Optimal; lp.xstar[:] = ss.xstar; ss.vstar = lp.vstar; return ss.status)
+        (ss.status != Infeasible) && phase2!(ss, verbose = verbose)
+    end
+    lp.status = ss.status
+    isOptimal(ss) && (lp.xstar[:] = ss.xstar; lp.vstar = ss.vstar)
+    verbose && @show lp.vstar
+    verbose && @show lp.xstar
+    return ss.status
 end
+
+
+function println(ss::StandardSimplexe)
+    m, n = size(ss.M)
+    prd = "+" * prod("-------+" for _ in 1:n+1)
+    println(prd)
+    print("| V.B.  |")
+    for k in 1:n-1
+        s = ""
+        xk = " x_$k "
+        s*= xk
+        s*= prod(" " for _ in 1:7-length(xk))
+        print(s)
+        print("|")
+    end
+    #@show ss.b_idx
+    print(" T.D.  |")
+    println()
+    println(prd)
+    for i in 1:m
+        if i != m
+            s = "| "#------"
+            xk = ss.b_idx != [-1] ? "x_$(ss.b_idx[i])" : "   "
+            s*= xk
+            s*= prod(" " for _ in 1:6-length(xk))
+            print(s)
+        else
+            print("| -z    ")
+        end
+        for j in 1:n
+            print("| ")
+            str = string(Float64(ss.M[i, j]))
+            if length(str) >= 5
+                str = str[1:5]
+            end
+            print(str)
+            if length(1:(5 - length(str))) != 0
+                print(prod(" "  for _ in 1:(5 - length(str))))
+            end
+            print(" ")
+        end
+        println("|")
+        println(prd)
+    end
+end
+function xstar(ss::StandardSimplexe{T}) where T
+    ss.status != Optimal && @warn "probleme not optimal"
+    return copy(ss.xstar)
+end
+function vstar(ss::StandardSimplexe{T}) where T
+    ss.status != Optimal && @warn "probleme not optimal"
+    return ss.vstar
+end
+function isOptimal(ss::StandardSimplexe{T}) where T
+    return all(ss.M[end, 1:end-1] .>= -tol(T))
+end   

@@ -10,12 +10,12 @@ mutable struct LinearProblem{T} <: AbstractLP{T}
     function LinearProblem(A::Matrix{T}, b::Vector{T}, c::Vector{T}; isMin::Bool = true) where T
         isaninteger = (T <: Integer)
         isaninteger && @warn "$T cannot be used by solver, $Float64 used instead"
-        return new{isaninteger ? Float64 : T}(A, b, c, Unknown, [], isMin)
+        return new{isaninteger ? Float64 : T}(A, b, c, Unknown, [], isMin, zeros(T, size(A, 2)))
     end
     function LinearProblem{T}(A::Matrix, b::Vector, c::Vector; isMin::Bool = true) where T
         isaninteger = (T <: Integer)
         isaninteger && @warn "$T cannot be used by solver, $Float64 used instead"
-        return new{isaninteger ? Float64 : T}(Array{T, 2}(A), Array{T, 1}(b), Array{T, 1}(c), Unknown, [], isMin)
+        return new{isaninteger ? Float64 : T}(Array{T, 2}(A), Array{T, 1}(b), Array{T, 1}(c), Unknown, [], isMin, zeros(T, size(A, 2)))
     end
 end
 function LinearProblem(A::Matrix{TA}, b::Vector{Tb}, c::Vector{Tc}; isMin::Bool = true) where {TA, Tb, Tc}

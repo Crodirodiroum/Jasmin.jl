@@ -1,2 +1,3 @@
 include("struct.jl")
-include("code.jl")
+include("phase1.jl")
+include("phase2.jl")
