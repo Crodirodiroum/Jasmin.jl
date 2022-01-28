@@ -19,7 +19,7 @@ mutable struct LinearProblem{T} <: AbstractLP{T}
     end
 end
 function LinearProblem(A::Matrix{TA}, b::Vector{Tb}, c::Vector{Tc}; isMin::Bool = true) where {TA, Tb, Tc}
-    T = promote_type(Ta, Tb, Tc)
+    T = promote_type(TA, Tb, Tc)
     (T <: Integer) && (T = Float64)
     return LinearProblem{T}(A, b, c, isMin = isMin)
 end

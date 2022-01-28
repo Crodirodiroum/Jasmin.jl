@@ -105,14 +105,14 @@ function println(ss::StandardSimplexe)
         println(prd)
     end
 end
-function xstar(ss::StandardSimplexe{T}) where T
+function xstar(ss::StandardSimplexe{T})::Vector{T} where T
     ss.status != Optimal && @warn "probleme not optimal"
     return copy(ss.xstar)
 end
-function vstar(ss::StandardSimplexe{T}) where T
+function vstar(ss::StandardSimplexe{T})::T where T
     ss.status != Optimal && @warn "probleme not optimal"
     return ss.vstar
 end
-function isOptimal(ss::StandardSimplexe{T}) where T
+function isOptimal(ss::StandardSimplexe{T})::Bool where T
     return all(ss.M[end, 1:end-1] .>= -tol(T))
 end   

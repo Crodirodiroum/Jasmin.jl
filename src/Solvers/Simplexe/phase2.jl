@@ -1,8 +1,11 @@
-function findpivot(ss::StandardSimplexe{T}; verbose::Bool = false) where T
+function findpivot(ss::StandardSimplexe{T}; verbose::Bool = false)::Tuple{Int, Int} where T
+    if isdegenerated(ss)
+        return BlandFindpivot(ss, verbose = verbose)
+    end
     M = ss.M
     m = size(M, 1) - 1
-    c = ss.M[end, 1:end-1]
-    b=  ss.M[1:end-1, end]
+    c = @view M[end, 1:end-1]
+    b = @view M[1:end-1, end]
     entering = argmin(c)
     verbose && @show entering
     @assert c[entering] < 0 "simplexe is in an optimal state" #ss was optimal
@@ -17,8 +20,32 @@ function findpivot(ss::StandardSimplexe{T}; verbose::Bool = false) where T
     verbose && @show leaving
     return leaving, entering
 end
+function BlandFindpivot(ss::StandardSimplexe{T}; verbose::Bool = verbose)::Tuple{Int, Int} where T
+    M = ss.M
+    m = size(M, 1) - 1
+    c = @view M[end, 1:end-1]
+    b = @view M[1:end-1, end]
+    entering = findfirst(t->t<zero(T), c)
+    verbose && @show entering
+    @assert c[entering] < 0 "simplexe is in an optimal state" #ss was optimal
+    val = T(Inf)
+    leaving = -1
+    for k in 1:m
+        if (ss.freelines[k]) && (M[k, entering] > 0) && ((tobeat = b[k]/M[k, entering]) < val)
+            leaving = k
+            val = tobeat
+        end
+    end
+    verbose && @show leaving
+    return leaving, entering
+end
+function isdegenerated(ss::StandardSimplexe)::Bool
+    M = ss.M
+    vTD = @view M[1:end-1, end]
+    return any(iszero, vTD[ss.freelines])
+end
 
-function phase2!(ss::StandardSimplexe{T}; verbose::Bool = false, kmax = 10000) where T
+function phase2!(ss::StandardSimplexe{T}; verbose::Bool = false, kmax = 10000)::Status where T
     k = 0
     m2, n2 = size(ss.M)
     m, n = m2 - 1,  n2 -1
