@@ -1,7 +1,7 @@
 module ProblemTest
 using LinearAlgebra
-P1 = (sol = [[1,0], [0, 1]], vsol = -1,  A = [1 1], b = [1], c = [-1, -1])
-P2 = (sol = [[1,0], [0, 1]], vsol = -1, A = [1 1; 1 1], b = [1, 1], c = [-1, -1])
+P1 = (sol = [[1,0], [0, 1]], vsol = -1,  A = [1 1], b = [1], c = [-1, -1], isoptimal = true, isbounded = true, isfeasible = true)
+P2 = (sol = [[1,0], [0, 1]], vsol = -1, A = [1 1; 1 1], b = [1, 1], c = [-1, -1], isoptimal = true, isbounded = true, isfeasible = true)
 function kmstar(n::Int, ::Type{T} = Int) where T
     xstar = zeros(T, 2*n)
     xstar[n] = 100^(n - 1)
@@ -24,13 +24,18 @@ function km(n::Int, ::Type{T} = Int) where T
 end
 PKM = [
     ((A, b, c, vstar, xstar) = km(i);
-        (sol = xstar,
+        (sol = [xstar],
         vsol = vstar,
             A = A,
             b = b,
-            c = c
+            c = c, 
+            isoptimal = true, 
+            isbounded = true, 
+            isfeasible = true
         )
     )
     for i in 1:10
 ]
-end#ProblemTest
+#Problem List
+PL = [P1, P2, PKM...]
+end

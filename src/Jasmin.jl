@@ -1,6 +1,6 @@
 module Jasmin
 
-using LinearAlgebra, Combinatorics
+using LinearAlgebra, Combinatorics, Test
 
 import Base.println
 
