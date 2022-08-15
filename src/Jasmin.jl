@@ -18,5 +18,9 @@ abstract type AbstractLP{T} end
 include("LinearProblemRepresentation/main.jl")
 include("Solvers/main.jl")
 
-include("test/main.jl")
+#include("test/main.jl")
+
+
+#by default, Jasmin does base enumeration to solve a problem. 
+changeSolver!(basesolver)
 end # module
