@@ -38,8 +38,8 @@ function (be::BE{T})(lp::AbstractLP{T}; verbose::Bool = false) where T
         b = b[removedLine]
     end
     m, n = size(A)
-    A = [A zeros(T, m); c' one(T)]
-    b = [b ; abignumber(T)]
+    A = [A zeros(T, m); c' -one(T)]
+    b = [b ; -abignumber(T)]
     c = [c; zero(T)]
     verbose && @show A
     verbose && @show b

@@ -28,11 +28,10 @@ function pivot!(M::Array{T,2}, i::Int, j::Int, Binv::Array{T, 2} = Array{T, 2}(u
     return M
 end
 
-abignumber(::Type{Float64}) = reinterpret(Float64, (reinterpret(UInt64, typemax(Float64)) - UInt64(1)))/100
-abignumber(::Type{Float32}) = reinterpret(Float32, (reinterpret(UInt32, typemax(Float32)) - UInt32(1)))/100
-#abignumber(::Type{Float16}) = reinterpret(Float16, (reinterpret(UInt16, typemax(Float16)) - UInt16(1)))/100
-abignumber(::Type{Rational{Int128}}) = div(typemax(Int128), Int128(1000))//Int128(1)
-abignumber(::Type{Rational{Int64}}) = div(typemax(Int64), Int64(1000))//Int64(1)
+abignumber(::Type{Float64}) = Float64(10_000_000)
+abignumber(::Type{Float32}) = Float32(1_000_000)
+abignumber(::Type{Rational{Int128}}) = div(typemax(Int128), Int128(1000000))//Int128(1)
+abignumber(::Type{Rational{Int64}}) = div(typemax(Int64), Int64(1000000))//Int64(1)
 abignumber(::Type{Rational{Int32}}) = div(typemax(Int32), Int32(1000))//Int32(1)
 
 tol(::Type{T}) where T <: AbstractFloat = 10*eps(T)
