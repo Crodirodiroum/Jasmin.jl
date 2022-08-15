@@ -1,7 +1,7 @@
 name = "Jasmin"
 uuid = "933bf34c-63a6-4b3c-9215-9e95b90b8e7c"
 authors = ["Jean Laprés-Chartrand <jl_chartrand@hotmail.com>"]
-version = "0.2.0"
+version = "0.2.1"
 
 [deps]
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
