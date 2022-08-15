@@ -7,15 +7,16 @@ mutable struct LinearProblem{T} <: AbstractLP{T}
     isMin::Bool
     xstar::Vector{T}
     vstar::T
+    issilent::Bool
     function LinearProblem(A::Matrix{T}, b::Vector{T}, c::Vector{T}; isMin::Bool = true) where T
         isaninteger = (T <: Integer)
         isaninteger && @warn "$T cannot be used by solver, $Float64 used instead"
-        return new{isaninteger ? Float64 : T}(A, b, c, Unknown, [], isMin, zeros(T, size(A, 2)))
+        return new{isaninteger ? Float64 : T}(A, b, c, Unknown, [], isMin, zeros(T, size(A, 2)), false)
     end
     function LinearProblem{T}(A::Matrix, b::Vector, c::Vector; isMin::Bool = true) where T
         isaninteger = (T <: Integer)
         isaninteger && @warn "$T cannot be used by solver, $Float64 used instead"
-        return new{isaninteger ? Float64 : T}(Array{T, 2}(A), Array{T, 1}(b), Array{T, 1}(c), Unknown, [], isMin, zeros(T, size(A, 2)))
+        return new{isaninteger ? Float64 : T}(Array{T, 2}(A), Array{T, 1}(b), Array{T, 1}(c), Unknown, [], isMin, zeros(T, size(A, 2)), false)
     end
 end
 function LinearProblem(A::Matrix{TA}, b::Vector{Tb}, c::Vector{Tc}; isMin::Bool = true) where {TA, Tb, Tc}
@@ -27,11 +28,11 @@ end
 const LP{T} = LinearProblem{T}
 
 function xstar(lp::LP{T})::Vector{T} where T
-    @assert lp.status == Optimal
+    #@assert lp.status == Optimal
     return copy(lp.xstar)
 end
 function vstar(lp::LP{T})::T where T
-    @assert lp.status == Optimal
+    #@assert lp.status == Optimal
     return lp.vstar
 end
 
@@ -50,7 +51,7 @@ end
 function getc(lp::LP{T})::Array{T, 1} where T
     return lp.c
 end
-
+#=
 function addconstraint!(lp::LinearProblem{T}, v::Vector{T}, b::T) where T
     lp.A = [lp.A; v']
     lp.b = [lp.b; b]
@@ -65,3 +66,4 @@ function addvariable!(lp::LinearProblem{T}) where T
     lp.c = [lp.c; zero(T)]
     addvariable!.(lp.solvers)
 end
+=#

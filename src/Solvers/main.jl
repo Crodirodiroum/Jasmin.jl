@@ -4,7 +4,7 @@ global basesolver = BaseEnumeration
 function changeSolver!(::Type{T}) where T <: AbstractSolver
     global basesolver = T
 end 
-function solve!(lp::AbstractLP; verbose::Bool = false)
+function solve!(lp::AbstractLP; verbose::Bool = !lp.issilent)
     solver = basesolver(lp)
     solver(lp, verbose = verbose)
     push!(lp.solvers, solver)
