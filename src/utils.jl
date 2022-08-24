@@ -39,10 +39,16 @@ tol(::Type{T}) where T <: Rational = T(0)
 
 function isacanonicalcol(v::AbstractVector)::Bool
     m = length(v)
+    if m == 0 # ArgumentError: reducing over an empty collection is not allowed
+        return true
+    end
     return (sum(iszero, v) == (m - 1)) && (sum(isone, v) == 1)
 end
 function iscanonical(A::AbstractMatrix)::Tuple{Bool, Vector{Int}}
     m, n = size(A)
+    if m == 0
+        return true, Int[]
+    end
     basis = zeros(Int, m)
     for i in 1:n
         Ai = @view A[:, i]

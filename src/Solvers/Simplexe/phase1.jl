@@ -1,4 +1,4 @@
-function phase1!(ss::StandardSimplexe{T}; verbose::Bool = false)::StandardSimplexe{T} where  T
+function phase1!(ss::StandardSimplexe{T}; verbose::Bool = false, timelimit::Float64 = Inf) where  T
     verbose && println("In phase1")
     M = ss.M
     m, n = size(M)
@@ -14,7 +14,8 @@ function phase1!(ss::StandardSimplexe{T}; verbose::Bool = false)::StandardSimple
         vAk = @view Aphase1initial[:, k]
         iscanoncol = isacanonicalcol(vAk)
         if iscanoncol
-            base[idx] = findfirst(vAk)
+            idx = findfirst(t -> abs(t - 1) < 1e-6, vAk)
+            base[idx] = k 
         end
     end
     artificialvar = findall(t->t==-1, base)
@@ -31,13 +32,13 @@ function phase1!(ss::StandardSimplexe{T}; verbose::Bool = false)::StandardSimple
     end
     verbose && println("simplexe array of phase 1")
     verbose && println(ssphase1)
-    phase2!(ssphase1, verbose = verbose)
+    status = phase2!(ssphase1, verbose = verbose, timelimit = timelimit)
     verbose && println("solved simplexe array of phase 1")
     verbose && println(ssphase1)
     #if the simplexe array  is optimal but the objective value is different then 0
-    if (ssphase1.status == Optimal) && (ssphase1.vstar > tol(T))
+    if (status == MOI.OPTIMAL) && (ssphase1.vstar > tol(T))
         verbose && println("probleme is unfeasible")
-        ss.status = Infeasible
+        return MOI.INFEASIBLE
     else
         freelines = (t -> t in 1:n).(ssphase1.b_idx)
         ss.Binv = ssphase1.Binv[freelines, freelines]
@@ -46,10 +47,19 @@ function phase1!(ss::StandardSimplexe{T}; verbose::Bool = false)::StandardSimple
         ss.M[1:m, end] = @view ssphase1.M[1:m, end]
         ss.b_idx[:] .= -1
         ss.b_idx[freelines] = ssphase1.b_idx[freelines]
+        
+        if maximum(base) < n
+            println("////////////////////////////////////////////////////////////////////////////////////////////////////////////")
+            println("error predicted in base")
+            println(ss)
+            println("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\")
+        end
+
+
         for (i,j) in enumerate(base)
             freelines[i] && ss.M[end, j] != zero(T) && pivot!(M, i, j)
         end
         ss.vstar = - ss.M[end, end]
     end
-    return ss
+    return MOI.OPTIMAL
 end

@@ -1,1 +1,0 @@
-@enum Status Optimal Infeasible Unknown Unbounded

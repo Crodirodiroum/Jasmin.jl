@@ -1,23 +1,22 @@
 mutable struct BaseEnumeration{T} <: AbstractSolver{T}
     xstar::Array{T, 2}
     vstar::T
-    status::Status
     colindexs::Array{Int, 2}
-    removedLine::BitVector
+    removedLines::BitVector
     n::Int
     function BaseEnumeration(lp::AbstractLP{T}) where T
         n = nvar(lp)
         m = ncons(lp)
         xstar = Array{T, 2}(undef, n + 1, 0) #a made up variable
         vstar = typemax(T)
-        status = Unknown
         colindexs = Array{Int, 2}(undef, m + 1, 0) #made up constraint
-        removedLine = falses(m)
-        return new{T}(xstar, vstar, status, colindexs, removedLine, n)
+        removedLines = trues(m)
+        return new{T}(xstar, vstar, colindexs, removedLines, n)
     end
 end
 const BE{T} = BaseEnumeration{T}
-function (be::BE{T})(lp::AbstractLP{T}; verbose::Bool = false) where T
+function (be::BE{T})(lp::AbstractLP{T}; verbose::Bool = !lp.issilent) where T
+    time0 = time()
     A = getA(lp)
     b = getb(lp)
     c = getc(lp)
@@ -26,16 +25,16 @@ function (be::BE{T})(lp::AbstractLP{T}; verbose::Bool = false) where T
     if r1 != r2 
         verbose && println("Infeasible since rank(A) != rank([A b])")
         #this is Infeasible
-        be.status = lp.status = Infeasible
+        lp.status = MOI.Infeasible
     end
     if r1 < size(A, 1)
         #there are redundent constraint
-        removedLine = reduceproblem(A, b)
-        @assert sum(removedLine) == r1 "Impossible to reduce the problem to a feasible form"
-        be.removedLine[:] = removedLine
-        verbose && println("A not full rank, $(sum(!, be.removedLine)) rows removed from problem.")
-        A = A[removedLine, :]
-        b = b[removedLine]
+        removedLines = reduceproblem(A, b)
+        @assert sum(removedLines) == r1 "Impossible to reduce the problem to a feasible form"
+        be.removedLines[:] = removedLines
+        verbose && println("A not full rank, $(sum(!, be.removedLines)) rows removed from problem.")
+        A = A[removedLines, :]
+        b = b[removedLines]
     end
     m, n = size(A)
     A = [A zeros(T, m); c' -one(T)]
@@ -48,6 +47,10 @@ function (be::BE{T})(lp::AbstractLP{T}; verbose::Bool = false) where T
     C =  combinations(1:n, m)
     verbose && println("will loop over the $(length(C)) possible basis.")
     for (iter, comb) in enumerate(C)
+        if time() - time0 > lp.timelimit
+            lp.status = MOI.TIME_LIMIT
+            return MOI.TIME_LIMIT
+        end
         B = @view A[:, comb]
         if rank(B) == m
             xB = B\b
@@ -75,18 +78,15 @@ function (be::BE{T})(lp::AbstractLP{T}; verbose::Bool = false) where T
         end
     end
     if be.vstar == typemax(T)
-        be.status = Infeasible
-        lp.status = Infeasible
+        lp.status = MOI.INFEASIBLE
     elseif be.vstar == -abignumber(T)
-        be.status = Unbounded
-        lp.status = Unbounded
+        lp.status = MOI.DUAL_INFEASIBLE
     else
-        be.status = Optimal
-        lp.status = Optimal
+        lp.status = MOI.OPTIMAL
         lp.xstar = be.xstar[1:end - 1, 1]
         lp.vstar = be.vstar
     end
-    return be.status
+    return lp.status
 end
 
 function reduceproblem(A::Matrix{T}, b::Vector{T})::BitVector where T
@@ -99,4 +99,19 @@ function reduceproblem(A::Matrix{T}, b::Vector{T})::BitVector where T
         isnothing(j) ? (reducedprob[i] = false) : pivot!(M, i, j)
     end
     return reducedprob
+end
+function getdual(lp::AbstractLP{T}, be::BaseEnumeration{T}) where T
+    baseindex = be.colindexs[1:end - 1, 1]
+    removedlines = be.removedLines[1:end]
+    A = getA(lp)
+    b = getb(lp)
+    c = getc(lp)
+    m, n = size(A)
+
+    B = @view A[removedlines, baseindex]
+    cB = @view c[baseindex]
+
+    lambda = zeros(T, m)
+    lambda[removedlines] = (B')\cB
+    return lambda
 end

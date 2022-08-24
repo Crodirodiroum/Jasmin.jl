@@ -45,23 +45,25 @@ function isdegenerated(ss::StandardSimplexe)::Bool
     return any(iszero, vTD[ss.freelines])
 end
 
-function phase2!(ss::StandardSimplexe{T}; verbose::Bool = false, kmax = 10000)::Status where T
+function phase2!(ss::StandardSimplexe{T}; verbose::Bool = false, kmax = 10000, timelimit::Float64 = Inf)::MOI.TerminationStatusCode where T
+    timephase2start = time()
+    status = MOI.OTHER_ERROR
     k = 0
     m2, n2 = size(ss.M)
     m, n = m2 - 1,  n2 -1
     while !isOptimal(ss) && (k+=1) <= kmax
+        (time() - timephase2start > timelimit) && return MOI.TIME_LIMIT
         verbose && @show k
         verbose && println(ss)
         i, j = findpivot(ss, verbose = verbose)
         if i == -1
-            ss.status = Unbounded
-            break
+            return MOI.DUAL_INFEASIBLE
         end
         pivot!(ss.M, i, j, ss.Binv, freelines = ss.freelines)
         ss.b_idx[i] = j
     end
     if isOptimal(ss) 
-        ss.status = Optimal
+        status = MOI.OPTIMAL
         ss.xstar = zeros(T, n)
         freebasis = ss.b_idx[ss.freelines]
         xB = ss.M[[ss.freelines; false], end]
@@ -69,9 +71,8 @@ function phase2!(ss::StandardSimplexe{T}; verbose::Bool = false, kmax = 10000)::
         ss.vstar = -ss.M[end, end]
     end  
     
-    status = ss.status
     verbose && (println("$status Simplexe");  println(ss))
     verbose && @show ss.xstar
     verbose && @show ss.vstar
-    ss.status
+    status
 end

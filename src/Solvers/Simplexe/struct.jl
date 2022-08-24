@@ -5,7 +5,6 @@ mutable struct StandardSimplexe{T} <: AbstractSolver{T}
     vstar::T
     b_idx::Array{Int, 1}
     freelines::BitVector#index k is true if line k is linearly independent of the previous lines, dependent lines are found during phase 1.
-    status::Status
     function StandardSimplexe{T}(M::Matrix{T}) where {T}
         @assert !(typeof(T) <: Integer)  "Type $T cannot be a subtype of Integer"
         m, n = size(M).-1
@@ -14,7 +13,6 @@ mutable struct StandardSimplexe{T} <: AbstractSolver{T}
         ss.Binv = Array{T, 2}(I, m, m)
         ss.b_idx = -ones(T, m)
         ss.xstar = zeros(T, n)
-        ss.status = Unknown
         ss.freelines = trues(m) #lines are inocent until proven guilty
         return ss
     end
@@ -34,7 +32,8 @@ function StandardSimplexe(lp::AbstractLP{T}) where T
     return StandardSimplexe{T}(A, b, c)
 end
 
-function (ss::StandardSimplexe{T})(lp::AbstractLP{T}; verbose::Bool = false) where T
+function (ss::StandardSimplexe{T})(lp::AbstractLP{T}; verbose::Bool = !lp.issilent) where T
+    timeoptimizationstart = time()
     m = size(ss.M, 1) - 1
     for k in 1:m
         if ss.M[k, end] <  0
@@ -45,24 +44,27 @@ function (ss::StandardSimplexe{T})(lp::AbstractLP{T}; verbose::Bool = false) whe
     M = ss.M
     vM = @view M[1:end-1, :]
     iscanon, basis = iscanonical(vM)
+    status = MOI.OPTIMIZE_NOT_CALLED
     if iscanon
         ss.b_idx[:] = basis
-        isOptimal(ss) && (ss.status = Optimal; lp.status = Optimal; lp.xstar[:] = ss.xstar; ss.vstar = lp.vstar; return ss.status)
-        phase2!(ss, verbose = verbose)
+        isOptimal(ss) && (lp.status = MOI.OPTIMAL; lp.xstar[:] = ss.xstar; ss.vstar = lp.vstar; return lp.status)
+        status = phase2!(ss, verbose = verbose, timelimit = lp.timelimit)
     else
-        phase1!(ss, verbose = verbose)
-        isOptimal(ss) && (ss.status = Optimal; lp.status = Optimal; lp.xstar[:] = ss.xstar; ss.vstar = lp.vstar; return ss.status)
-        (ss.status != Infeasible) && phase2!(ss, verbose = verbose)
+        statusphase1 = phase1!(ss, verbose = verbose, timelimit = lp.timelimit)
+        isOptimal(ss) && (lp.status = MOI.OPTIMAL; lp.xstar[:] = ss.xstar; ss.vstar = lp.vstar; return lp.status)
+        currenttime = time()
+        timelimit = lp.timelimit - (currenttime - timeoptimizationstart)
+        (statusphase1 == MOI.OPTIMAL) && (status = phase2!(ss, verbose = verbose, timelimit = timelimit))
     end
-    lp.status = ss.status
+    lp.status = status
     isOptimal(ss) && (lp.xstar[:] = ss.xstar; lp.vstar = ss.vstar)
     verbose && @show lp.vstar
     verbose && @show lp.xstar
-    return ss.status
+    return lp.status
 end
 
 
-function println(ss::StandardSimplexe)
+function Base.println(ss::StandardSimplexe)
     m, n = size(ss.M)
     prd = "+" * prod("-------+" for _ in 1:n+1)
     println(prd)
@@ -106,11 +108,11 @@ function println(ss::StandardSimplexe)
     end
 end
 function xstar(ss::StandardSimplexe{T})::Vector{T} where T
-    ss.status != Optimal && @warn "probleme not optimal"
+    #ss.status != Optimal && @warn "probleme not optimal"
     return copy(ss.xstar)
 end
 function vstar(ss::StandardSimplexe{T})::T where T
-    ss.status != Optimal && @warn "probleme not optimal"
+    #ss.status != Optimal && @warn "probleme not optimal"
     return ss.vstar
 end
 function isOptimal(ss::StandardSimplexe{T})::Bool where T

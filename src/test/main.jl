@@ -5,20 +5,20 @@ function testProblem(::Type{so}, ::Type{l}, p::NamedTuple, ::Type{T} = Float64):
     (sol, vsol,  A, b, c, isoptimal, isbounded, isfeasible) = (p.sol, p.vsol,  p.A, p.b, p.c, p.isoptimal, p.isbounded, p.isfeasible)
     linearform = l{T}(A, b, c)
     changeSolver!(so)
-    solve!(linearform)
+    status = solve!(linearform)
     goodstatus = false
     if isoptimal
-        goodstatus = (linearform.status == Optimal)
+        goodstatus = (linearform.status == MOI.OPTIMAL)
     elseif !isbounded
-        goodstatus = (linearform.status == Unbounded)
+        goodstatus = (linearform.status == MOI.DUAL_INFEASIBLE)
         return true
     elseif !isfeasible
-        goodstatus = (linearform.status == Infeasible)
+        goodstatus = (linearform.status == INFEASIBLE)
         return true
     end
 
     goodsol = isapprox(minimum([norm(xstar(linearform) - s) for s in sol]), 0, atol = 1e-6)
-    goodsolvalue = isapprox(vstar(linearform), vsol, atol = 1e-6)
+    goodsolvalue = isapprox(vstar(linearform), vsol, atol = 1e-4)
     #@show goodsol
     #@show goodsolvalue
     #@show goodstatus

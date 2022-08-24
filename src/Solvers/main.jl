@@ -1,8 +1,8 @@
-include("BaseEnumeration.jl")
+include("BaseEnumeration/main.jl")
 include("Simplexe/main.jl")
 global basesolver = BaseEnumeration
-function changeSolver!(::Type{T}) where T <: AbstractSolver
-    global basesolver = T
+function changeSolver!(::Type{SOLVER} = BaseEnumeration) where {SOLVER <: AbstractSolver}
+    global basesolver = SOLVER
 end 
 function solve!(lp::AbstractLP; verbose::Bool = !lp.issilent)
     solver = basesolver(lp)

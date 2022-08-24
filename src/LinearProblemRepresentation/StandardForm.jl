@@ -2,21 +2,24 @@ mutable struct LinearProblem{T} <: AbstractLP{T}
     A::Matrix{T}
     b::Vector{T}
     c::Vector{T}
-    status::Status
+    status::MOI.TerminationStatusCode
     solvers::Array{AbstractSolver{T}}
     isMin::Bool
     xstar::Vector{T}
     vstar::T
     issilent::Bool
+    timelimit::Float64
     function LinearProblem(A::Matrix{T}, b::Vector{T}, c::Vector{T}; isMin::Bool = true) where T
         isaninteger = (T <: Integer)
         isaninteger && @warn "$T cannot be used by solver, $Float64 used instead"
-        return new{isaninteger ? Float64 : T}(A, b, c, Unknown, [], isMin, zeros(T, size(A, 2)), false)
+        timelimit = 60.0
+        return new{isaninteger ? Float64 : T}(A, b, c, MOI.OPTIMIZE_NOT_CALLED, [], isMin, zeros(T, size(A, 2)), zero(T), true, timelimit)
     end
     function LinearProblem{T}(A::Matrix, b::Vector, c::Vector; isMin::Bool = true) where T
         isaninteger = (T <: Integer)
         isaninteger && @warn "$T cannot be used by solver, $Float64 used instead"
-        return new{isaninteger ? Float64 : T}(Array{T, 2}(A), Array{T, 1}(b), Array{T, 1}(c), Unknown, [], isMin, zeros(T, size(A, 2)), false)
+        timelimit = 60.0
+        return new{isaninteger ? Float64 : T}(Array{T, 2}(A), Array{T, 1}(b), Array{T, 1}(c), MOI.OPTIMIZE_NOT_CALLED, [], isMin, zeros(T, size(A, 2)), zero(T), true, timelimit)
     end
 end
 function LinearProblem(A::Matrix{TA}, b::Vector{Tb}, c::Vector{Tc}; isMin::Bool = true) where {TA, Tb, Tc}
@@ -28,11 +31,9 @@ end
 const LP{T} = LinearProblem{T}
 
 function xstar(lp::LP{T})::Vector{T} where T
-    #@assert lp.status == Optimal
     return copy(lp.xstar)
 end
 function vstar(lp::LP{T})::T where T
-    #@assert lp.status == Optimal
     return lp.vstar
 end
 
