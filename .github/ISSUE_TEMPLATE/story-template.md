@@ -14,9 +14,9 @@ assignees: ''
 Your Description Here
     
 ---
-#### PRIORITY :
-#### STORY POINTS :
-#### EXPLANATION :
+#### PRIORITY : This issue priority level here
+#### STORY POINTS : This issue story points here
+#### EXPLANATION : Your Explanation Here
 
 ## ACCEPTANCE TESTS :
 - <Test 1>
@@ -28,4 +28,4 @@ Your Description Here
 - [ ] <Task 2>
 - [ ] <Task 3>
 
-Development for this user story is found on branch `story/***BRANCH-TITLE-HERE***`.
+Development for this user story is found on branch `story/***ISSUE-NUMBER***-***BRANCH-TITLE-HERE***`.
