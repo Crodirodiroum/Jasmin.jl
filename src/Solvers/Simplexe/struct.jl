@@ -33,6 +33,8 @@ function StandardSimplexe(lp::AbstractLP{T}) where T
 end
 
 function (ss::StandardSimplexe{T})(lp::AbstractLP{T}; verbose::Bool = !lp.issilent) where T
+    verbose = true #todo change back
+    verbose && println("got a problem to solve, heres is it's linear Representation \n", lp)
     timeoptimizationstart = time()
     m = size(ss.M, 1) - 1
     for k in 1:m
@@ -51,6 +53,7 @@ function (ss::StandardSimplexe{T})(lp::AbstractLP{T}; verbose::Bool = !lp.issile
         status = phase2!(ss, verbose = verbose, timelimit = lp.timelimit)
     else
         statusphase1 = phase1!(ss, verbose = verbose, timelimit = lp.timelimit)
+        (statusphase1 == MOI.INFEASIBLE) && (lp.status = MOI.INFEASIBLE; return lp.status) 
         isOptimal(ss) && (lp.status = MOI.OPTIMAL; lp.xstar[:] = ss.xstar; ss.vstar = lp.vstar; return lp.status)
         currenttime = time()
         timelimit = lp.timelimit - (currenttime - timeoptimizationstart)
@@ -64,7 +67,7 @@ function (ss::StandardSimplexe{T})(lp::AbstractLP{T}; verbose::Bool = !lp.issile
 end
 
 
-function Base.println(ss::StandardSimplexe)
+function Base.print(ss::StandardSimplexe)
     m, n = size(ss.M)
     prd = "+" * prod("-------+" for _ in 1:n+1)
     println(prd)
@@ -104,7 +107,7 @@ function Base.println(ss::StandardSimplexe)
             print(" ")
         end
         println("|")
-        println(prd)
+        print(prd)
     end
 end
 function xstar(ss::StandardSimplexe{T})::Vector{T} where T

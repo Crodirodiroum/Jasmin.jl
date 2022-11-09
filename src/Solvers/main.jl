@@ -1,6 +1,6 @@
 include("BaseEnumeration/main.jl")
 include("Simplexe/main.jl")
-global basesolver = BaseEnumeration
+global basesolver = StandardSimplexe
 function changeSolver!(::Type{SOLVER} = BaseEnumeration) where {SOLVER <: AbstractSolver}
     global basesolver = SOLVER
 end 
