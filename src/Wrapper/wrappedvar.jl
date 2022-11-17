@@ -16,7 +16,7 @@ mutable struct WrappedVar{T}
     end
 end
 #create wraped variable for all variables in the model, add them to the map and add all variable constraints to variables.
-function createWrappedVar!(src::MOI.ModelLike, map::MOI.Utilities.IndexMap, current::Int, ::Type{T} = Float64) where T
+function createWrappedVar!(src::MOI.ModelLike, map::MOI.Utilities.IndexMap, current::Int, nconstraint::Int, ::Type{T} = Float64) where T
     vars = MOI.get(src, MOI.ListOfVariableIndices())
     wvs = Array{WrappedVar{T}, 1}()
     secondcurrent = 1
@@ -33,6 +33,8 @@ function createWrappedVar!(src::MOI.ModelLike, map::MOI.Utilities.IndexMap, curr
         wv = wvs[map[varindex].value]
         wv.upper = min(wv.upper, s.upper)
         wv.hasupperbound = true
+        map[ci] = MOI.ConstraintIndex{MOI.VariableIndex, MOI.LessThan{T}}(nconstraint)
+        nconstraint += 1
     end
     for ci in MOI.get(src, MOI.ListOfConstraintIndices{MOI.VariableIndex, MOI.GreaterThan{T}}())
         varindex = MOI.get(src, MOI.ConstraintFunction(), ci)
@@ -40,6 +42,8 @@ function createWrappedVar!(src::MOI.ModelLike, map::MOI.Utilities.IndexMap, curr
         wv = wvs[map[varindex].value]
         wv.lower = max(wv.lower, s.lower)
         wv.haslowerbound = true
+        map[ci] = MOI.ConstraintIndex{MOI.VariableIndex, MOI.GreaterThan{T}}(nconstraint)
+        nconstraint += 1
     end
     for ci in MOI.get(src, MOI.ListOfConstraintIndices{MOI.VariableIndex, MOI.EqualTo{T}}())
         varindex = MOI.get(src, MOI.ConstraintFunction(), ci)
@@ -49,8 +53,10 @@ function createWrappedVar!(src::MOI.ModelLike, map::MOI.Utilities.IndexMap, curr
         wv.upper = min(wv.upper, s.upper)
         wv.hasupperbound = true
         wv.haslowerbound = true
+        map[ci] = MOI.ConstraintIndex{MOI.VariableIndex, MOI.EqualTo{T}}(nconstraint)
+        nconstraint += 1
     end
-    return wvs
+    return wvs, nconstraint
 end
 function createrow(terms::Array{MathOptInterface.ScalarAffineTerm{T}, 1}, map::MOI.Utilities.IndexMap, vars::Array{WrappedVar{T}}) where T
     row = zeros(T, 2*length(vars))
@@ -72,11 +78,10 @@ function addcol(A::Matrix{T}) where T
     return [A zeros(T, m, 1)]
 end
 function createwrappedconstraint(src::MOI.ModelLike, map::MOI.Utilities.IndexMap, 
-        current::Int, vars::Array{WrappedVar{T}}, ::Type{T} = Float64)::Tuple{Matrix{T}, Vector{T}} where T
+        current::Int, vars::Array{WrappedVar{T}}, nconstraint::Int, ::Type{T} = Float64)::Tuple{Matrix{T}, Vector{T}, Int} where T
     F = MOI.ScalarAffineFunction{T}
     A = zeros(T, 0, 2*length(vars))
     b = zeros(T, 0)
-    nconstraint = 1
     for ci in MOI.get(src, MOI.ListOfConstraintIndices{F, MOI.EqualTo{T}}())
         f = MOI.get(src, MOI.ConstraintFunction(), ci)
         #println(prod("-" for _ in 1:80))
@@ -154,7 +159,7 @@ function createwrappedconstraint(src::MOI.ModelLike, map::MOI.Utilities.IndexMap
             end
         end
     end
-    return A, b
+    return A, b, nconstraint
 end
 
 function getvarvalue(vi::MOI.VariableIndex, map::MOI.Utilities.IndexMap, vars::Array{WrappedVar{T}}, x::Vector{T})::T where T

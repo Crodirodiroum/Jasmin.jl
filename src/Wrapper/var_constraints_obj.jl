@@ -27,7 +27,7 @@ function MOI.supports_constraint(
 end
 
 
-function MOI.supports(::Optimizer, ::MOI.ObjectiveFunction{F}) where {F <: MOI.AbstractScalarFunction}
+function MOI.supports(::Optimizer, ::MOI.ObjectiveFunction{F}) where {T, F <: MOI.ScalarAffineFunction{T}}
     return true
 end
 function MOI.supports(::Optimizer, ::MOI.ObjectiveSense)
@@ -35,19 +35,27 @@ function MOI.supports(::Optimizer, ::MOI.ObjectiveSense)
 end
 
 
-function MOI.get(model::Optimizer{T}, ::MOI.ConstraintPrimal, 
-        c::MOI.ConstraintIndex{R, S}) where {T, R, S}
-    return MOI.get(model.inner, MOI.ConstraintPrimal(), c)
+function MOI.get(model::Optimizer,
+        attr::MOI.ConstraintPrimal,
+        c::MOI.ConstraintIndex{MOI.VariableIndex,<:Any},)
+    #println("------------\n"^64)
+    return 0.0#getvarvalue(c, model.map, model.vars, model.wrap.xstar)
+end
+function MOI.get(model::Optimizer,
+        attr::MOI.ConstraintPrimal,
+        c::MOI.ConstraintIndex{MOI.ScalarAffineFunction{T},<:Any},) where T
+    return zero(T)
 end
 
-function MOI.get(model::Optimizer{T}, ::MOI.ConstraintDual, ci::MOI.ConstraintIndex{<:Any, <:Any}) where T
-    return MOI.get(model.inner, MOI.ConstraintDual(), ci) where T
+function MOI.get(model::Optimizer, cd::MOI.ConstraintDual, ci::MOI.ConstraintIndex{<:Any, <:Any}) where T
+    return zero(Float64)
 end
+
 
 function MOI.get(model::Optimizer, ::MOI.ListOfConstraintIndices{T, S}) where {T, S}
     return MOI.get(model.inner, MOI.ListOfConstraintIndices{T, S}())
 end
-#function MOI.get(model::Optimizer, ::, ci::MathOptInterface.ConstraintIndex)
+
 function MOI.get(model::Optimizer, ::MOI.ConstraintFunction, ci::MOI.ConstraintIndex{T, S}) where {T, S}
     return MOI.get(model.inner, MOI.ConstraintFunction(), ci)
 end

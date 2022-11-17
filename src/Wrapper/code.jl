@@ -14,6 +14,7 @@ mutable struct Optimizer{T} <: MOI.AbstractOptimizer
     timelimit::Float64
     solve_time::Float64
     map::MOI.IndexMap
+    nconstraint::Int
     function Optimizer(::Type{T} = Float64) where T
         opt = new{T}()
         opt.isempty = true
@@ -26,6 +27,7 @@ mutable struct Optimizer{T} <: MOI.AbstractOptimizer
         opt.xstar = zeros(T,0)
         opt.status = MOI.OPTIMIZE_NOT_CALLED
         opt.map = MOI.IndexMap()
+        opt.nconstraint = 1
         return opt
     end
 end
@@ -127,7 +129,7 @@ end
 
 
 
-MOI.supports(::Optimizer{T}, ::MOI.RawOptimizerAttribute) where T = true
+MOI.supports(::Optimizer, ::MOI.RawOptimizerAttribute) = true
 
 function MOI.set(model::Optimizer, param::MOI.RawOptimizerAttribute, value)
     key = Symbol(param.name)
@@ -147,9 +149,10 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)::MOI.IndexMap
     T = Float64
     current = 1
     map = MOI.Utilities.IndexMap()
-    vars = createWrappedVar!(src, map, current, T)
+    nconstraint = 1
+    vars, nconstraint = createWrappedVar!(src, map, current, nconstraint, T)
     dest.vars = vars
-    A, b = createwrappedconstraint(src, map, current, vars, T)
+    A, b, nconstraint = createwrappedconstraint(src, map, current, vars, nconstraint, T)
     c = zeros(T, size(A, 2))
     dest.objsense = MOI.get(src, MOI.ObjectiveSense())
     if dest.objsense != MOI.FEASIBILITY_SENSE
@@ -179,7 +182,8 @@ function MOI.get(model::Optimizer{T}, ::MOI.VariablePrimal, vi::MOI.VariableInde
     x = model.xstar
     #println("get value called")
     #getvarvalue(vi, map::MOI.Utilities.IndexMap, vars::Array{WrappedVar{T}}, x::Vector{T})
-    getvarvalue(vi, model.map, model.vars, x)
+    #getvarvalue(vi, model.map, model.vars, x)
+    return zero(T)
 end
 
 function MOI.get(model::Optimizer, attr::MOI.SolveTimeSec)
@@ -223,18 +227,32 @@ function MOI.get(model::Optimizer{T}, ::MOI.DualObjectiveValue) where T
     return zero(T)
 end
 
-function MOI.get(model::Optimizer, ::MOI.ConstraintPrimal,
-        c::MOI.ConstraintIndex{MOI.VariableIndex,<:Any})
-        #constraint on a single variable, return the value of the variable
-    return MOI.get(model, MOI.VariablePrimal(), MOI.VariableIndex(c.value))
-end
-
-
-
-
-function MOI.get(model::Optimizer, ::MOI.VariableBasisStatus, ci::MOI.VariableIndex)::MOI.BasisStatusCode
+function MOI.get(model::Optimizer, ::MOI.VariableBasisStatus, ci::MOI.VariableIndex)
     return MOI.NONBASIC_AT_LOWER
 end
-function MOI.get(model::Optimizer, ::MOI.ConstraintBasisStatus, ci::MOI.ConstraintIndex)::MOI.BasisStatusCode
+function MOI.get(model::Optimizer{T}, ::MOI.ObjectiveBound)::T where T
+    return zero(T)
+end
+
+
+function MOI.supports(model::Optimizer, ::MOI.ConstraintBasisStatus)
+    return true
+end
+
+function MOI.get(model::Optimizer, ::MOI.ConstraintBasisStatus, ci::Any)
+    println((("*"^16)*"\n")^32)
+    @show typeof(ci)
+    println((("*"^16)*"\n")^32)
+    return MOI.NONBASIC_AT_LOWER
+end
+
+
+function MOI.get(model::Optimizer{T},
+        attr::MOI.ConstraintBasisStatus,
+        c::MOI.ConstraintIndex{MOI.ScalarAffineFunction{T}, <:Union{
+            MOI.GreaterThan{T},
+            MOI.LessThan{T},
+            MOI.EqualTo{T},
+            MOI.Interval{T}}}) where T
     return MOI.BASIC
 end

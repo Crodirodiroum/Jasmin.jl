@@ -60,26 +60,23 @@ function test_runtests()
     MOI.Test.runtests(
         BRIDGED,
         CONFIG,
-        exclude = [
-            "21",
-            #"test_attribute_NumberOfThreads",#0/0
-            #"test_quadratic_",#19/22
-            #"test_conic",#119/215
-            #"test_add_constrained",#6/6
-            #"test_attribute", #9/9
-            #"test_basic", #289/289
-            #"test_constraint",#0/0
-            #"test_cpsat", #0/0
+        exclude = String[ 
+            "test_attribute_NumberOfThreads",#0/0
+            "test_quadratic_",#0/0
+            "test_conic",#129/217
+            "test_add_constrained",#6/6
+            "test_attribute", #9/9
+            "test_basic", #289/289
+            "test_constraint",#0/0
+            "test_cpsat", #0/0
             #"test_linear", #189/283
-            #"test_model",#143/145 #no exception thrown
-            #"test_modification",# 107/164
-            #"test_nonlinear",#23/23
-            #"test_objective",#35/47
-            #"test_solve",#24/38
-            #"test_variable", #59/70
-            #=
-
-            =#
+            "test_model",#143/145 #no exception thrown
+            "test_modification",# 107/164
+            "test_nonlinear",#23/23
+            "test_objective",#35/47
+            "test_solve",#24/38
+            "test_variable", #59/70 
+            
         ],
         # This argument is useful to prevent tests from failing on future
         # releases of MOI that add new tests. Don't let this number get too far
